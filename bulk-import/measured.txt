@@ -16,3 +16,4 @@ run_copy_from_loop 10 -> 5368.183571001282 ms
 run_insert_into_loop 1 -> 32111.909348001063 ms
 run_insert_into_loop 5 -> 11329.55918999869 ms
 run_insert_into_loop 10 -> 7758.074616001977 ms
+async_run_insert_loop 1 -> 0.003897002898156643 ms

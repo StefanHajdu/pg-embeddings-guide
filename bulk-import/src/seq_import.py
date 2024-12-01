@@ -1,4 +1,3 @@
-import jsonlines
 import os
 import io
 import psycopg2
@@ -6,6 +5,7 @@ from dotenv import load_dotenv
 
 from db_utils import measure, create_table, insert_into, copy_from, prepare_insert_into
 from my_types import Row
+from data_utils import get_data_as_tuples, get_data_as_csv
 from constants import DATA_JSONL_PATH, TABLE_NAME
 
 
@@ -13,7 +13,7 @@ def seq_insert_into(connection, chunk_size: int, limit: int = -1):
     """
     params:
     connection: PG connector
-    chunk_size: int, number of row inserted to pg in single query
+    chunk_size: int, number of rows inserted to pg in single query
     limit: int, total number of rows to be insterted to pg
     """
     create_table(connection, TABLE_NAME)
@@ -25,7 +25,7 @@ def seq_insert_into_prepared(connection, chunk_size: int, limit: int = -1):
     """
     params:
     connection: PG connector
-    chunk_size: int, number of row inserted to pg in single query
+    chunk_size: int, number of rows inserted to pg in single query
     limit: int, total number of rows to be insterted to pg
     """
     create_table(connection, TABLE_NAME)
@@ -34,20 +34,13 @@ def seq_insert_into_prepared(connection, chunk_size: int, limit: int = -1):
     run_insert_into_loop(connection, data, chunk_size=chunk_size)
 
 
-def get_data_as_tuples(path, limit: int = -1) -> list[tuple[Row]]:
-    with open(path, "r") as fp:
-        row_reader = jsonlines.Reader(fp)
-        all_rows = [tuple(row.values()) for row in list(row_reader)[:limit]]
-        return all_rows
-
-
 @measure
 def run_insert_into_loop(connection, data: list[tuple[Row]], chunk_size: int):
     """
     params:
     connection: PG connector
     data: tuple[Row], list of (author, text, likes, video_id) tuples
-    chunk_size: int, number of row inserted to PG in single query
+    chunk_size: int, number of rows inserted to PG in single query
     """
     if chunk_size < 0:
         insert_into(connection, data)
@@ -60,26 +53,12 @@ def seq_copy_from(connection, chunk_size: int, limit: int = -1):
     """
     params:
     connection: PG connector
-    chunk_size: int, number of row inserted to pg in single query
+    chunk_size: int, number of rows inserted to pg in single query
     limit: int, total number of rows to be insterted to pg
     """
     create_table(connection, TABLE_NAME)
     data = get_data_as_csv(DATA_JSONL_PATH, limit=limit)
     run_copy_from_loop(connection, data, chunk_size=chunk_size)
-
-
-def get_data_as_csv(path, limit: int = -1) -> io.StringIO:
-    with open(path, "r") as fp:
-        row_reader = jsonlines.Reader(fp)
-        all_rows = [
-            "\t".join([str(item).replace("\t", "\\t") for item in list(row.values())])
-            .replace("\\0", "")
-            .replace("\\", "\\\\")
-            .replace("\r", "\\r")
-            .replace("\n", "\\n")
-            for row in list(row_reader)[:limit]
-        ]
-        return all_rows
 
 
 @measure
@@ -88,7 +67,7 @@ def run_copy_from_loop(connection, data: list[str], chunk_size: int):
     params:
     connection: PG connector
     data: tuple[Row], list of (author, text, likes, video_id) tuples
-    chunk_size: int, number of row inserted to PG in single query
+    chunk_size: int, number of rows inserted to PG in single query
     """
     if chunk_size < 0:
         csv_ = io.StringIO()
