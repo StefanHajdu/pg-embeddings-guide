@@ -4,8 +4,8 @@ import json
 import time
 import multiprocessing as mp
 
-with open("../data/comments/drinker.json") as f:
-    youtube_videos_ids = json.load(f)
+with open("../data/comments/ids/drinker.json") as f:
+    youtube_videos_ids = json.load(f)["missing"]
 
 
 TEST_URL = "http://localhost:3000/client/youtube/"

@@ -1,0 +1,18 @@
+total rows: 1_009_808
+
+# raw insert into
+run_insert_into_loop -1 -> 5305.669141998806 ms
+run_insert_into_loop 1 -> 31056.331527999646 ms
+run_insert_into_loop 5 -> 12423.186001999056 ms
+run_insert_into_loop 10 -> 7991.488515999663 ms
+
+# copy from
+run_copy_from_loop -1 -> 1846.9330320003792 ms
+run_copy_from_loop 1 -> 39042.34599299889 ms
+run_copy_from_loop 5 -> 8634.149599998636 ms
+run_copy_from_loop 10 -> 5368.183571001282 ms
+
+# prepared insert into
+run_insert_into_loop 1 -> 32111.909348001063 ms
+run_insert_into_loop 5 -> 11329.55918999869 ms
+run_insert_into_loop 10 -> 7758.074616001977 ms
