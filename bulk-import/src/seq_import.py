@@ -3,7 +3,13 @@ import io
 import psycopg2
 from dotenv import load_dotenv
 
-from db_utils import measure, create_table, insert_into, copy_from, prepare_insert_into
+from db_utils import (
+    measure,
+    create_table,
+    insert_into,
+    copy_from,
+    prepare_insert_into,
+)
 from my_types import Row
 from data_utils import get_data_as_tuples, get_data_as_csv
 from constants import DATA_JSONL_PATH, TABLE_NAME
@@ -96,18 +102,18 @@ if __name__ == "__main__":
     if not conn.closed:
         print("Connected to postgres\n")
 
-    seq_insert_into(conn, chunk_size=-1)
-    seq_insert_into(conn, chunk_size=1)
-    seq_insert_into(conn, chunk_size=5)
-    seq_insert_into(conn, chunk_size=10)
+    # seq_insert_into(conn, chunk_size=-1)
+    seq_insert_into(conn, chunk_size=1, limit=-1)
+    # seq_insert_into(conn, chunk_size=5)
+    # seq_insert_into(conn, chunk_size=10)
 
-    seq_insert_into_prepared(conn, chunk_size=1)
-    seq_insert_into_prepared(conn, chunk_size=5)
-    seq_insert_into_prepared(conn, chunk_size=10)
+    # seq_insert_into_prepared(conn, chunk_size=1)
+    # seq_insert_into_prepared(conn, chunk_size=5)
+    # seq_insert_into_prepared(conn, chunk_size=10)
 
-    seq_copy_from(conn, chunk_size=-1)
-    seq_copy_from(conn, chunk_size=1)
-    seq_copy_from(conn, chunk_size=5)
-    seq_copy_from(conn, chunk_size=10)
+    # seq_copy_from(conn, chunk_size=-1)
+    # seq_copy_from(conn, chunk_size=1)
+    # seq_copy_from(conn, chunk_size=5)
+    # seq_copy_from(conn, chunk_size=10)
 
     conn.close()

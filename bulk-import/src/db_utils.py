@@ -25,6 +25,24 @@ def measure(func):
     return measure_wrapper
 
 
+def async_measure(func):
+    @wraps(func)
+    async def measure_wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = await func(*args, **kwargs)
+        end = time.perf_counter()
+        print(
+            f"{func.__name__} {kwargs.get("chunk_size", "")} -> {1000*(end - start)} ms"
+        )
+        with open(TIME_LOG_PATH, "a") as f:
+            f.write(
+                f"{func.__name__} {kwargs.get("chunk_size", "")} -> {1000*(end - start)} ms\n"
+            )
+        return result
+
+    return measure_wrapper
+
+
 def create_table(connection, table_name: str = TABLE_NAME):
     with connection.cursor() as cursor:
         query = """
@@ -39,13 +57,16 @@ def create_table(connection, table_name: str = TABLE_NAME):
         cursor.execute(query.format_map({"table_name": table_name}))
 
 
-def insert_into(connection, chunk: list[tuple[Row]]):
+async def insert_into(connection, chunk: list[tuple[Row]]):
     with connection.cursor() as cursor:
         query = f"""
             INSERT INTO {TABLE_NAME} (author, text, likes, video_id)
             VALUES %s
         """
-        psycopg2.extras.execute_values(cursor, query, chunk)
+        try:
+            psycopg2.extras.execute_values(cursor, query, chunk)
+        except Exception as e:
+            print(e)
 
 
 def prepare_insert_into(connection):
