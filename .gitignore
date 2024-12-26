@@ -2,3 +2,10 @@
 notes.md
 data
 *.pyc
+*.ipynb
+__pycache__
+.venv
+howto
+*.txt
+*.list
+*.sql

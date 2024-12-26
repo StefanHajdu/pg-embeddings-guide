@@ -3,8 +3,8 @@ import io
 import psycopg2
 from dotenv import load_dotenv
 
+from utils import measure
 from db_utils import (
-    measure,
     create_table,
     insert_into,
     copy_from,
@@ -103,7 +103,7 @@ if __name__ == "__main__":
         print("Connected to postgres\n")
 
     # seq_insert_into(conn, chunk_size=-1)
-    seq_insert_into(conn, chunk_size=1, limit=-1)
+    # seq_insert_into(conn, chunk_size=1, limit=-1)
     # seq_insert_into(conn, chunk_size=5)
     # seq_insert_into(conn, chunk_size=10)
 
@@ -111,7 +111,7 @@ if __name__ == "__main__":
     # seq_insert_into_prepared(conn, chunk_size=5)
     # seq_insert_into_prepared(conn, chunk_size=10)
 
-    # seq_copy_from(conn, chunk_size=-1)
+    seq_copy_from(conn, chunk_size=-1)
     # seq_copy_from(conn, chunk_size=1)
     # seq_copy_from(conn, chunk_size=5)
     # seq_copy_from(conn, chunk_size=10)

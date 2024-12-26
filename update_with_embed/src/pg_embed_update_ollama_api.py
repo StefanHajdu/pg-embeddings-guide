@@ -1,14 +1,16 @@
 import asyncio as aio
-from ollama import AsyncClient
 import asyncpg as apg
 import psycopg2 as pg2
 import pandas as pd
-from sqlalchemy import create_engine
-from dotenv import load_dotenv
 import os
-from typing import TypedDict
 import time
-from functools import wraps
+
+from ollama import AsyncClient
+from dotenv import load_dotenv
+from typing import TypedDict
+
+from update_with_embed.src.utils.db_utils import open_sqlalchemy_conn
+from update_with_embed.src.utils.measure_utils import async_measure, measure
 
 
 class DbItem(TypedDict):
@@ -22,30 +24,6 @@ class DbUpdatedItem(TypedDict):
 
 
 OLLAMA_PORT = 11_434
-
-
-def async_measure(coro):
-    @wraps(coro)
-    async def measure_wrapper(*args, **kwargs):
-        start = time.perf_counter()
-        result = await coro(*args, **kwargs)
-        end = time.perf_counter()
-        print(f"{coro.__name__}: {(end - start)} s")
-        return result
-
-    return measure_wrapper
-
-
-def measure(func):
-    @wraps(func)
-    def measure_wrapper(*args, **kwargs):
-        start = time.perf_counter()
-        result = func(*args, **kwargs)
-        end = time.perf_counter()
-        print(f"{func.__name__}: {(end - start)} s")
-        return result
-
-    return measure_wrapper
 
 
 class OllamaSimplePool:
@@ -64,18 +42,6 @@ class OllamaSimplePool:
             model="nomic-embed-text",
             prompt=text,
         )
-
-
-def open_sqlalchemy_conn():
-    host = ("localhost",)
-    port = (os.environ["PG_PORT"],)
-    database = ("pgvector-test",)
-    user = (os.environ["PG_USER"],)
-    password = (os.environ["PG_PASSWORD"],)
-    connection_str = (
-        f"postgresql://{user[0]}:{password[0]}@{host[0]}:{port[0]}/{database[0]}"
-    )
-    return create_engine(connection_str)
 
 
 @async_measure
@@ -119,18 +85,7 @@ def seq_update_pg_with_embed(pg_conn, bulk: dict[str:str], responses: list[float
 
 
 @async_measure
-async def iterate_and_update(iterator_conn, ollamaPool, limit=2):
-    # apg_conn_pool = await apg.create_pool(
-    #     min_size=10,
-    #     max_size=10,
-    #     max_inactive_connection_lifetime=0,
-    #     host="localhost",
-    #     port=os.environ["PG_PORT"],
-    #     database="pgvector-test",
-    #     user=os.environ["PG_USER"],
-    #     password=os.environ["PG_PASSWORD"],
-    # )
-
+async def iterate_and_update(iterator_conn, ollamaPool, limit=1):
     pg_conn = pg2.connect(
         host="localhost",
         port=os.environ["PG_PORT"],
@@ -151,11 +106,9 @@ async def iterate_and_update(iterator_conn, ollamaPool, limit=2):
                 cnt += 1
                 bulk = df.to_dict(orient="records")
                 responses = await ollamaPool.embed_bulk(bulk=bulk)
-                # await update_pg_with_embed(apg_conn_pool, bulk, responses)
                 seq_update_pg_with_embed(pg_conn, bulk, responses)
                 print(f"iteration: {cnt} in {time.perf_counter() - s1}")
 
-    # await apg_conn_pool.close()
     conn.close()
 
 

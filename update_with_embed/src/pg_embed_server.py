@@ -3,13 +3,17 @@ import socket
 import json
 import sys
 import psycopg2 as pg2
+import torch
 
 from dotenv import load_dotenv
 
 from sentence_transformers import SentenceTransformer
 
+# torch.set_num_threads(4)
+
 local_embed_model = SentenceTransformer(
     "/home/stephenx/LLMs/ollama/third-party/safetensors/nomic-embed-text-v1.5",
+    # device="cpu",
     trust_remote_code=True,
 )
 

@@ -7,14 +7,15 @@ import json
 import multiprocessing
 
 from dotenv import load_dotenv
-from itertools import batched
 
-from db_utils import open_sqlalchemy_conn
+from utils.db_utils import open_sqlalchemy_conn
 from pg_embed_server import launch_server
-from measure_utils import measure
+from utils.measure_utils import measure
 
 
 NUM_PARALLEL_WORKERS = 4
+LIMIT = 1
+CHUNK_SIZE = 10_000
 
 
 class EmbedSocketPool:
@@ -47,28 +48,29 @@ class EmbedSocketPool:
 
 
 def send_chunks_to_sockets(uds_pool, bulk):
-    batches = list(batched(bulk, 1))
-
-    for i in range(len(batches)):
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-
-        # make sure server is listening!
-        s.connect(uds_pool.uds_paths[i])
-        s.sendall(json.dumps(batches[i][0]).encode("utf-8"))
-        s.close()
+    for i in range(0, len(bulk), NUM_PARALLEL_WORKERS):
+        for j in range(NUM_PARALLEL_WORKERS):
+            try:
+                s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                # make sure server is listening!
+                s.connect(uds_pool.uds_paths[j])
+                s.sendall(json.dumps(bulk[i + j]).encode("utf-8"))
+                s.close()
+            except Exception:
+                break
 
 
 @measure
-def iterate_and_update(iterator_conn, uds_pool, limit=2_500):
+def iterate_and_update(iterator_conn, uds_pool, limit=LIMIT):
     cnt = 0
     with iterator_conn.connect() as conn:
         for df in pd.read_sql(
             "SELECT idx::text, text FROM youtube_comments",
             conn,
-            chunksize=NUM_PARALLEL_WORKERS,
+            chunksize=CHUNK_SIZE,
         ):
             if cnt == limit:
-                break
+                return True
             else:
                 cnt += 1
                 bulk = df.to_dict(orient="records")
@@ -84,5 +86,6 @@ if __name__ == "__main__":
     print(uds_pool)
 
     print("Servers running.")
-    time.sleep(10)
-    iterate_and_update(iterator_conn, uds_pool)
+    time.sleep(5)
+    if iterate_and_update(iterator_conn, uds_pool):
+        sys.exit(0)

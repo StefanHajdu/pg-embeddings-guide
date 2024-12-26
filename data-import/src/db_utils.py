@@ -59,7 +59,8 @@ def create_table(connection, table_name: str = TABLE_NAME):
                 video_id            CHARACTER(255),
                 author              TEXT,
                 text                TEXT,
-                likes               INTEGER
+                likes               INTEGER,
+                embed               vector(768)
             );
         """
         cursor.execute(query.format_map({"table_name": table_name}))
@@ -80,10 +81,10 @@ def wait(conn):
 
 def async_pg_select_sleep(pg_aconn_pool):
     aconn = pg_aconn_pool.getconn()
-    wait(aconn)
+    # wait(aconn)
     acurs = aconn.cursor()
-    acurs.execute("SELECT pg_sleep(0.1); SELECT 42;")
-    wait(acurs.connection)
+    acurs.execute("SELECT pg_sleep(1); SELECT 42;")
+    # wait(acurs.connection)
 
     try:
         res = acurs.fetchone()
@@ -94,26 +95,30 @@ def async_pg_select_sleep(pg_aconn_pool):
         pg_aconn_pool.putconn(aconn)
 
 
-async def async_insert_into(aconn, chunk: list[tuple[Row]]):
-    with aconn.cursor() as acurs:
-        query = f"""
-            INSERT INTO {TABLE_NAME} (author, text, likes, video_id)
-            VALUES (%s, %s, %s, %s)
-        """
-        try:
-            acurs.execute(query, chunk)
-        except Exception as e:
-            print(e)
+def insert_into_pool(pg_aconn_pool, chunk: list[tuple[Row]], chunk_id: int):
+    conn = pg_aconn_pool.getconn()
+    curs = conn.cursor()
+    query = f"""
+        INSERT INTO {TABLE_NAME} (author, text, likes, video_id) VALUES (%s, %s, %s, %s)
+    """
+    try:
+        curs.executemany(query, chunk)
+        conn.commit()
+        return f"done: {chunk_id}"
+    except Exception as e:
+        print(e)
+    finally:
+        pg_aconn_pool.putconn(conn)
 
 
-async def insert_into(connection, chunk: list[tuple[Row]]):
-    with connection.cursor() as cursor:
+def insert_into(connection, chunk: list[tuple[Row]], chunk_id: int):
+    with connection.cursor() as curs:
         query = f"""
-            INSERT INTO {TABLE_NAME} (author, text, likes, video_id)
-            VALUES %s
+            INSERT INTO {TABLE_NAME} (author, text, likes, video_id) VALUES (%s, %s, %s, %s)
         """
         try:
-            psycopg2.extras.execute_values(cursor, query, chunk)
+            curs.executemany(query, chunk)
+            return f"done: {chunk_id}"
         except Exception as e:
             print(e)
 
